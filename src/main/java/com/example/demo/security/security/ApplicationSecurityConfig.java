@@ -13,6 +13,10 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.util.matcher.AndRequestMatcher;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+
+import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableWebSecurity //애플리케이션에 필요한 설정을 할 수 있음
@@ -34,9 +38,9 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
         .csrf().disable()
         .authorizeRequests()//요청을 인가할 거
         .antMatchers("/", "index", "/css/*", "/js/*")//화이트리스트 지정을 위해 특정 경로 패턴 정의
-          .permitAll() //상기 패턴은 허용함
+        .permitAll() //상기 패턴은 허용함
         .antMatchers("/api/**")//api하위의 모든 것
-          .hasRole(ApplicationUserRole.STUDENT.name())//지정된 uri는 STUDENT role만 접근 가능함.
+        .hasRole(ApplicationUserRole.STUDENT.name())//지정된 uri는 STUDENT role만 접근 가능함.
         //method level에서 처리했으므로 일단 주석처리
 //              .antMatchers(HttpMethod.DELETE, "/management/api/**").hasAuthority(ApplicationUserPermission.COURSE_WRITE.getPermission())//antMatchers 메서드의 첫 인자로 http method넣을 수 있음.
 //              .antMatchers(HttpMethod.POST, "/management/api/**").hasAuthority(ApplicationUserPermission.COURSE_WRITE.getPermission())
@@ -45,7 +49,26 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
         .anyRequest()//어떤 요청이든
         .authenticated()//인증된 거
         .and()
-        .httpBasic();//인증 수단은 httpBasic
+        .formLogin()
+          .loginPage("/login").permitAll()
+          .defaultSuccessUrl("/courses",true)
+          .passwordParameter("password")//로그인 form의 input name 변경하고싶을때 설정.
+          .usernameParameter("username") //로그인 form의 input name 변경하고싶을때 설정.
+        .and()
+        .rememberMe()
+          .tokenValiditySeconds((int)TimeUnit.DAYS.toSeconds(21))//유효기간으로 정할 값(초단위)  -21일간 저장시킬 예정
+          .key("somethindverysecured")//remember me 토큰 생성할때 사용되는 키
+          .rememberMeParameter("remember-me") //로그인 form의 input name 변경하고싶을때 설정.
+        .and()
+        .logout()//로그아웃 설정 시작
+          .logoutUrl("/logout")//로그아웃 요청보낼 url
+        //csrf protection이 활성화된 상태면 post로 로그아웃 요청 보내야하는데, 굳이 get으로 로그아웃 할 경우의 설정
+          .logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))
+          .clearAuthentication(true)//사용자 인증정보 삭제
+          .invalidateHttpSession(true)//세션 무효화
+          .deleteCookies("JSESSIONID", "remeber-me")//쿠키 삭제
+          .logoutSuccessUrl("/login");//로그아웃 성공시 redirection될 url
+
   }
 
 
