@@ -1,18 +1,15 @@
-package com.example.demo.security.security;
+package com.example.demo.security;
 
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.example.demo.security.security.ApplicationUserPermission.*;
-
 public enum ApplicationUserRole {
   STUDENT(new HashSet<>()),
-  ADMIN(Set.of(STUDENT_WRITE, COURSE_WRITE, COURSE_READ, STUDENT_READ)),
-  ADMINTRAINEE(Set.of(COURSE_READ, STUDENT_READ));
+  ADMIN(Set.of(ApplicationUserPermission.STUDENT_WRITE, ApplicationUserPermission.COURSE_WRITE, ApplicationUserPermission.COURSE_READ, ApplicationUserPermission.STUDENT_READ)),
+  ADMINTRAINEE(Set.of(ApplicationUserPermission.COURSE_READ, ApplicationUserPermission.STUDENT_READ));
 
   private final Set<ApplicationUserPermission> permissions;
 

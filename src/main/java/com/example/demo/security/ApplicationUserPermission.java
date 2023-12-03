@@ -1,4 +1,4 @@
-package com.example.demo.security.security;
+package com.example.demo.security;
 
 public enum ApplicationUserPermission {
   STUDENT_READ("student:read"),
