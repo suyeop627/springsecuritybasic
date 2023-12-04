@@ -1,7 +1,10 @@
 package com.example.demo.security;
 
+import com.example.demo.auth.ApplicationUserService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -21,9 +24,11 @@ import java.util.concurrent.TimeUnit;
 public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
 
   private final PasswordEncoder passwordEncoder;
+  private final ApplicationUserService applicationUserService;
 
-  public ApplicationSecurityConfig(PasswordEncoder passwordEncoder) {
+  public ApplicationSecurityConfig(PasswordEncoder passwordEncoder, ApplicationUserService applicationUserService) {
     this.passwordEncoder = passwordEncoder;
+    this.applicationUserService = applicationUserService;
   }
 
 
@@ -67,8 +72,23 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
           .logoutSuccessUrl("/login");//로그아웃 성공시 redirection될 url
 
   }
+//AuthenticationManagerBuilder의 authenticationProvider에 daoAuthenticationProvider를 추가함
+  @Override
+  protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+    auth.authenticationProvider(daoAuthenticationProvider());
+  }
 
+  //사용자 인증을 위해 사용자 정보와 비밀번호를 저장소에서 가져오는데 사용됨
+  @Bean
+  public DaoAuthenticationProvider daoAuthenticationProvider(){
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+    provider.setPasswordEncoder(passwordEncoder);//비밀번호 인증방식
+    provider.setUserDetailsService(applicationUserService);//사용자 정보 가져올때 사용할 userDetailsService
+    return provider;
+  }
 
+// auth packge에서 대체함
+  /*
   @Override
   @Bean
   protected UserDetailsService userDetailsService() { //db에서 어떻게 유저를 가져오는지 정의
@@ -88,10 +108,12 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
     UserDetails tomUser = User.builder()
         .username("tom")
         .password(passwordEncoder.encode("0000"))
-        //.roles(ApplicationUserRole.ADMINTRAINEE.name()) //ROLE_ADMINTRAINEE
+        .roles(ApplicationUserRole.ADMINTRAINEE.name()) //ROLE_ADMINTRAINEE
         .authorities(ApplicationUserRole.ADMINTRAINEE.getGrantedAuthorities())
         .build();
     return new InMemoryUserDetailsManager(annaSmithUser, lindaUser, tomUser);
   }
+*/
+
 }
 
