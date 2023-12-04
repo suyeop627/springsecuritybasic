@@ -1,6 +1,9 @@
 package com.example.demo.security;
 
 import com.example.demo.auth.ApplicationUserService;
+import com.example.demo.jwt.JwtConfig;
+import com.example.demo.jwt.JwtTokenVerifier;
+import com.example.demo.jwt.JwtUsernameAndPasswordAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -9,14 +12,10 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import java.util.concurrent.TimeUnit;
+import javax.crypto.SecretKey;
 
 @Configuration
 @EnableWebSecurity //애플리케이션에 필요한 설정을 할 수 있음
@@ -25,10 +24,13 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
 
   private final PasswordEncoder passwordEncoder;
   private final ApplicationUserService applicationUserService;
-
-  public ApplicationSecurityConfig(PasswordEncoder passwordEncoder, ApplicationUserService applicationUserService) {
+  private final SecretKey secretKey;
+  private final JwtConfig jwtConfig;
+  public ApplicationSecurityConfig(PasswordEncoder passwordEncoder, ApplicationUserService applicationUserService, SecretKey secretKey, JwtConfig jwtConfig) {
     this.passwordEncoder = passwordEncoder;
     this.applicationUserService = applicationUserService;
+    this.secretKey = secretKey;
+    this.jwtConfig = jwtConfig;
   }
 
 
@@ -38,6 +40,11 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
         //.csrf().csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
         //.and()
         .csrf().disable()
+        .sessionManagement()
+          .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        .and()
+        .addFilter(new JwtUsernameAndPasswordAuthenticationFilter(authenticationManager(), jwtConfig, secretKey)) //WebSecurityConfigurerAdapter에서 authenticationManager 호출 메서드 제공
+        .addFilterAfter(new JwtTokenVerifier(secretKey, jwtConfig), JwtUsernameAndPasswordAuthenticationFilter.class)
         .authorizeRequests()//요청을 인가할 거
         .antMatchers("/", "index", "/css/*", "/js/*")//화이트리스트 지정을 위해 특정 경로 패턴 정의
         .permitAll() //상기 패턴은 허용함
@@ -49,7 +56,9 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
 //              .antMatchers(HttpMethod.PUT, "/management/api/**").hasAuthority(ApplicationUserPermission.COURSE_WRITE.getPermission())
 //              .antMatchers(HttpMethod.GET, "management/api/**").hasAnyRole(ApplicationUserRole.ADMIN.name(), ApplicationUserRole.ADMINTRAINEE.name())
         .anyRequest()//어떤 요청이든
-        .authenticated()//인증된 거
+        .authenticated();//인증된 거
+
+        /*jwt 쓸때 필요없는 부분 주석
         .and()
         .formLogin()
           .loginPage("/login").permitAll()
@@ -70,6 +79,8 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
           .invalidateHttpSession(true)//세션 무효화
           .deleteCookies("JSESSIONID", "remeber-me")//쿠키 삭제
           .logoutSuccessUrl("/login");//로그아웃 성공시 redirection될 url
+          */
+
 
   }
 //AuthenticationManagerBuilder의 authenticationProvider에 daoAuthenticationProvider를 추가함
